@@ -116,10 +116,8 @@ private[avro] class AvroRelation(
     if (inputs.isEmpty) {
       sqlContext.sparkContext.emptyRDD[Row]
     } else {
-      new UnionRDD[Row](sqlContext.sparkContext,
-      inputs.map(path =>
         sqlContext.sparkContext.hadoopFile(
-          path.getPath.toString,
+          pathReducer(inputs),
           classOf[org.apache.avro.mapred.AvroInputFormat[GenericRecord]],
           classOf[org.apache.avro.mapred.AvroWrapper[GenericRecord]],
           classOf[org.apache.hadoop.io.NullWritable]).keys.map(_.datum())
@@ -178,9 +176,11 @@ private[avro] class AvroRelation(
                 }
               }
             }
-        }))
+        }
     }
   }
+
+  private def pathReducer(inputs: Array[FileStatus]): String = inputs.map(_.getPath).mkString(",")
 
   /**
    * Checks to see if the given Any is the same avro relation based off of the input paths, schema,
