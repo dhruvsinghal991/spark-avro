@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.databricks.spark.avro
+package com.datashop.spark.avro
 
 import java.nio.ByteBuffer
 import java.util.HashMap

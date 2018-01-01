@@ -1,4 +1,4 @@
-package com.databricks.spark.avro
+package com.datashop.spark.avro
 
 import java.io.File
 

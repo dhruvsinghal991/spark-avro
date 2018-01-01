@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.databricks.spark.avro
+package com.datashop.spark.avro
 
 import java.io.{OutputStream, IOException}
 import java.nio.ByteBuffer

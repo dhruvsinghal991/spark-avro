@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.databricks.spark.avro
+package com.datashop.spark.avro
 
 import java.io.FileNotFoundException
 import java.util.zip.Deflater
@@ -179,7 +179,7 @@ private[avro] class AvroRelation(
         }
     }
   }
-  
+
   private def pathReducer(inputs: Array[FileStatus]): String = inputs.map(_.getPath).mkString(",")
 
   /**
