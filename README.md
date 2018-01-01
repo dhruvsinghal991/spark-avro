@@ -5,6 +5,12 @@ A library for reading and writing Avro data from [Spark SQL](http://spark.apache
 [![Build Status](https://travis-ci.org/databricks/spark-avro.svg?branch=master)](https://travis-ci.org/databricks/spark-avro)
 [![codecov.io](http://codecov.io/github/databricks/spark-avro/coverage.svg?branch=master)](http://codecov.io/github/databricks/spark-avro?branch=master)
 
+## Changes
+
+The databricks avro library does a UNION RDD on all the input files provided to the build scan, infact it creates an RDD for every file input to the HadoopFsRelation. This requires a lot of driver memory to broadcast large amount of RDDs in case of highly partitioned AVRO files although this is resolved in the case of spark version > 2.0.0. The class `org.apache.avro.mapred.AvroInputFormat` can by itself handle a single file, directory or glob. 
+
+
+
 ## Requirements
 
 This documentation is for Spark 1.4+.
