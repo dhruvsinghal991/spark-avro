@@ -179,7 +179,7 @@ private[avro] class AvroRelation(
         }
     }
   }
-
+  
   private def pathReducer(inputs: Array[FileStatus]): String = inputs.map(_.getPath).mkString(",")
 
   /**
