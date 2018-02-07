@@ -20,13 +20,14 @@ import org.apache.spark.sql.{SQLContext, DataFrameReader, DataFrameWriter, DataF
 package object avro {
 
   /**
-   * Adds a method, `avroFile`, to SQLContext that allows reading data stored in Avro.
-   */
+    * Adds a method, `avroFile`, to SQLContext that allows reading data stored in Avro.
+    */
   @deprecated("use read.avro()", "1.1.0")
   implicit class AvroContext(sqlContext: SQLContext) {
-    def avroFile(filePath: String, minPartitions: Int = 0) =
+    def avroFile(filePath: Array[String], minPartitions: Int = 0) = {
       sqlContext.baseRelationToDataFrame(
-        new AvroRelation(Array(filePath), None, None, Map.empty)(sqlContext))
+        new AvroRelation(filePath, None, None, Map.empty)(sqlContext))
+    }
   }
 
   /**
