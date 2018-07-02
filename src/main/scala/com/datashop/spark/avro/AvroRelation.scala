@@ -48,14 +48,13 @@ private[avro] class AvroRelation(
   private val IgnoreFilesWithoutExtensionProperty = "avro.mapred.ignore.inputs.without.extension"
   private val recordName = parameters.getOrElse("recordName", "topLevelRecord")
   private val recordNamespace = parameters.getOrElse("recordNamespace", "")
-  private val userDefinedSchema = parameters.getOrElse("userDefinedSchema", "")
+//  private val userDefinedSchema = parameters.getOrElse("userDefinedSchema", "")
 
   /** needs to be lazy so it is not evaluated when saving since no schema exists at that location */
   private lazy val avroSchema = paths match {
-    //    case Array(head, _*) => newReader(head)(_.getSchema)
-    case Array(head, _*) => new Schema.Parser().parse(userDefinedSchema)
-    case Array() =>
-      throw new java.io.FileNotFoundException("Cannot infer the schema when no files are present.")
+        case Array(head, _*) => newReader(head)(_.getSchema)
+        case Array() =>
+          throw new java.io.FileNotFoundException("Cannot infer the schema when no files are present.")
   }
 
   /**
@@ -114,10 +113,25 @@ private[avro] class AvroRelation(
     * this is then used to generate the field converters and the rows that only
     * contain `requiredColumns`
     */
+
   override def buildScan(requiredColumns: Array[String], inputs: Array[FileStatus]): RDD[Row] = {
 
-    val broadcastedSchema = sqlContext.sparkContext.broadcast(userDefinedSchema)
-    
+    val build = SchemaBuilder.record(recordName).namespace(recordNamespace)
+    val finalReadSchema: Schema = maybeDataSchema match {
+      // scalastyle:off
+      case Some(structType) => SchemaConverters.convertStructToAvro(dataSchema, build, recordNamespace)
+      case None => {
+        val schema = Schema.createRecord(recordName, null, recordNamespace, false)
+        schema.setFields(
+          paths.flatMap(f => {
+          newReader(f)(_.getSchema).getFields.map(field => new Schema.Field(field.name(), field.schema(), field.doc(), field.defaultValue()))
+        }).toSet[Schema.Field].toList)
+        schema
+      }
+    }
+
+    val broadcastedSchema = sqlContext.sparkContext.broadcast(finalReadSchema.toString)
+
     if (inputs.isEmpty) {
       sqlContext.sparkContext.emptyRDD[Row]
     } else {
@@ -131,22 +145,22 @@ private[avro] class AvroRelation(
             Iterator.empty
           } else {
             val firstRecord = records.next()
-            val userProvidedSchema = new Schema.Parser().parse(broadcastedSchema.value)
-            val superSchema = userProvidedSchema
 
+            val superSchema = new Schema.Parser().parse(broadcastedSchema.value)
             val avroFieldMap = superSchema.getFields.map(f => (f.name, f)).toMap
+
             new Iterator[Row] {
               private[this] val baseIterator = records
               private[this] var currentRecord = firstRecord
 
-              private[this] val rowBuffer = new Array[Any](avroFieldMap.size)
+              private[this] val rowBuffer = new Array[Any](requiredColumns.size)
 
               // A micro optimization to avoid allocating a WrappedArray per row.
               private[this] val bufferSeq = rowBuffer.toSeq
 
               // An array of functions that pull a column out of an avro record and puts the
               // converted value into the correct slot of the rowBuffer.
-              private[this] val fieldExtractors = avroFieldMap.keys.toArray.zipWithIndex.map {
+              private[this] val fieldExtractors = requiredColumns.zipWithIndex.map {
                 case (columnName, idx) =>
                   // Spark SQL should not pass us invalid columns
                   val field =
@@ -161,7 +175,7 @@ private[avro] class AvroRelation(
                         converter(record.get(field.name()))
                       }
                       catch {
-                        case foo: Exception => null
+                        case e: Exception => null
                       }
                     }
               }
@@ -194,6 +208,7 @@ private[avro] class AvroRelation(
         }
     }
   }
+
 
   private def pathReducer(inputs: Array[FileStatus]): String = inputs.map(_.getPath).mkString(",")
 
